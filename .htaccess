@@ -1,0 +1,39 @@
+# 1) Permitir symlinks para public/storage → storage/app/public
+Options +FollowSymLinks
+
+RewriteEngine On
+RewriteBase /
+
+# 2) Sirvo /storage/... (vídeos, imágenes subidas) ANTES de redirigir todo a index.html
+#    esto evita que React overridee las peticiones de .mp4
+RewriteRule ^storage/(.*)$ storage/$1 [L]
+
+# 3) MIME types de vídeo (asegúrate de tener mod_mime)
+<IfModule mod_mime.c>
+  AddType video/mp4        .mp4 .m4v
+  AddType video/webm       .webm
+  AddType video/ogg        .ogv .ogg
+  AddType video/quicktime  .mov
+</IfModule>
+
+# 4) CORS si frontend y API están en distinto dominio/subdominio
+<IfModule mod_headers.c>
+  <FilesMatch "\.(mp4|webm|og[gv]|mov)$">
+    Header set Access-Control-Allow-Origin "*"
+  </FilesMatch>
+</IfModule>
+
+# 5) Ya sólo dejo el fallback de React para *todo lo demás*  
+#    PERO sólo una vez que no sea fichero ni directorio real
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
+
+# 6) Cache largo para estáticos
+<IfModule mod_expires.c>
+  ExpiresActive on
+  ExpiresByType text/css              "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/*               "access plus 1 year"
+  ExpiresByType video/*               "access plus 1 year"
+</IfModule>
